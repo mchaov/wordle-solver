@@ -3,28 +3,35 @@ const path = require('path');
 
 console.log(`
 #############################################
-## Command form: npm run start c???? a,r t,i
+## Command form: npm run start c???? a,r t,i, unknown=?o???
 #############################################
 
-c????   - pattern + length, ? denoting unknown letter
-a,r     - alphabet, known letters, unknown position
-t,i     - letters that aren't in the word
-
+c????               - pattern + length, ? denoting unknown letter
+has=a,r             - alphabet, known letters, unknown position
+not=t,i             - letters that aren't in the word
+unknown=?o???,??o?? - known letters but not possible positions
 `)
 
 const lang = process.argv[2] || "en";
 let pattern = process.argv[3] || "cra??";
 let letters = [];
 let ignore = [];
+let unknowns = [];
 
 const hasLetters = process.argv.find(x => x.match("has"));
 if (hasLetters) {
     letters = hasLetters.replace("has=", "").split(",");
 }
 
+
 const hasIgores = process.argv.find(x => x.match("not"));
 if (hasIgores) {
     ignore = hasIgores.replace("not=", "").split(",");
+}
+
+const hasUnknowns = process.argv.find(x => x.match("unknown"));
+if (hasUnknowns) {
+    unknowns = hasUnknowns.replace("unknown=", "").split(",");
 }
 
 const filePath = path.join(__dirname, "words", `${lang}.words.txt`);
@@ -52,10 +59,16 @@ const unknownLetterMap = {
     en: "[a-z]",
     bg: "[а-я]"
 }
-const concreteLetters = new RegExp(pattern
-    .replaceAll("?", unknownLetterMap[lang]),
-    "gim"
-);
+
+function makeExactMatchPattern(pat) {
+    return new RegExp(
+        pat
+            .replaceAll("?", unknownLetterMap[lang]),
+        "gim"
+    )
+}
+
+const concreteLetters = makeExactMatchPattern(pattern);
 
 console.log(`
 Your input:
@@ -80,7 +93,17 @@ if (letters.length > 0) {
     result = result.filter(x => x.match(randomPlaceLetters))
 }
 
-result = result.filter(x => x.match(concreteLetters))
+unknowns.forEach(x => {
+    const filter = makeExactMatchPattern(x);
+    result = result.filter(x => !x.match(filter))
+})
+
+result = result
+    .filter(x => x.match(concreteLetters))
 
 
-console.log("\n\n", result);
+console.log(
+    "\n\n",
+    JSON.stringify(result, null, 2),
+    `total: ${result.length}`
+);
