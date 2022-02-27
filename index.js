@@ -3,7 +3,7 @@ const path = require('path');
 
 console.log(`
 #############################################
-## Command form: npm run start c???? a,r t,i, unknown=?o???
+## Command form: npm run start c???? has=a,r not=t,i, unknown=?o???
 #############################################
 
 c????               - pattern + length, ? denoting unknown letter
