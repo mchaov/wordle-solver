@@ -101,7 +101,6 @@ result = result
     .filter(x => x.match(concreteLetters))
 
 console.log(
-    "\n\n",
     JSON.stringify(result, null, 2),
     `total: ${result.length}`
 );
