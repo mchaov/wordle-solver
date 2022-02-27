@@ -23,7 +23,6 @@ if (hasLetters) {
     letters = hasLetters.replace("has=", "").split(",");
 }
 
-
 const hasIgores = process.argv.find(x => x.match("not"));
 if (hasIgores) {
     ignore = hasIgores.replace("not=", "").split(",");
@@ -100,7 +99,6 @@ unknowns.forEach(x => {
 
 result = result
     .filter(x => x.match(concreteLetters))
-
 
 console.log(
     "\n\n",
