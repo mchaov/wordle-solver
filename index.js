@@ -2,9 +2,9 @@ const readFileSync = require('fs').readFileSync;
 const path = require('path');
 
 console.log(`
-#########################################################################
-## Command form: npm run start en c???? has=a,r not=t,i, unknown=?a???,??a??
-#########################################################################
+###########################################################################
+## Command form: npm run start en c???? has=a,r not=t,i unknown=?a???,??a??
+###########################################################################
 
 en                  - supported languages: en|bg
 c????               - pattern + length, ? denoting unknown letter

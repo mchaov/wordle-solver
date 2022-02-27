@@ -6,9 +6,9 @@
 ## Usage
 
 ```bash
-############################################################################
-## Command form: npm run start en c???? has=a,r not=t,i, unknown=?a???,??a??
-############################################################################
+###########################################################################
+## Command form: npm run start en c???? has=a,r not=t,i unknown=?a???,??a??
+###########################################################################
 
 # en                  - supported languages: en|bg
 # c????               - pattern + length, ? denoting unknown letter
@@ -24,12 +24,12 @@ Your input:
 lang: en
 pattern: c????
 letters: a,r
-ignore: t,i,
+ignore: t,i
 
 Devised patterns:
 concreteLetters: /c[a-z][a-z][a-z][a-z]/gim
 randomPlaceLetters: /(?=.*a)(?=.*r).*/gim
-ignoredLetters: /((?![t,i,]).)*$/gim
+ignoredLetters: /((?![t,i]).)*$/gim
 
 [
   "Cedar",
