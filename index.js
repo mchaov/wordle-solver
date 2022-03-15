@@ -121,11 +121,6 @@ unknowns.forEach(x => {
 result = result
     .filter(x => x.match(concreteLetters))
 
-// console.log(
-//     JSON.stringify(result, null, 2),
-//     `total: ${result.length}`
-// );
-
 const repeatedLetters = {}
 
 result
@@ -140,8 +135,6 @@ result
             repeatedLetters[x] += 1
         }
     })
-
-// console.log(repeatedLetters)
 
 function fixNumber(number, fix = 2) {
     return parseFloat(number.toFixed(fix))
