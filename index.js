@@ -166,6 +166,8 @@ const suggestions2 = scored
     .sort((b, a) => a[2] - b[2])
     .slice(0, totalToPreview)
 
+console.log("Total results:", scored.length)
+
 console.log(`### Scoring 1:`)
 console.table(
     suggestions1
