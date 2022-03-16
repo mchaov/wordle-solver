@@ -1,4 +1,6 @@
 // letter: [percent, score]
+// based on this:
+// https://www3.nd.edu/~busiforc/handouts/cryptography/letterfrequencies.html
 module.exports = {
     e: [11.1607, 56.88],
     a: [8.4966, 43.31],
