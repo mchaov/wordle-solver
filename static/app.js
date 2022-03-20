@@ -93,7 +93,7 @@ function renderUnknownPatterns(lang, unknownPatterns) {
     if (lang === "") { return "" }
 
     return `
-        Unknown places: <input
+        Impossible places: <input
             id="unknownPatterns" 
             type="text"
             value="${unknownPatterns}"> // ?a???,??a?? => means we can't have "a" in the 2nd or 3rd position
