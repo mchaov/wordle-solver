@@ -141,12 +141,9 @@ function renderTable(set, cls1, cls2) {
 }
 
 function renderResult(lang, result) {
-    console.log(lang === "", result.length === 0)
     if (lang === "" || result.length === 0) { return "" }
 
     const [total, set1, set2] = result
-
-    console.log(total, set1, set2)
 
     return `
     <h3>Found:</h3>
@@ -226,7 +223,7 @@ function clickHandler({ target }) {
                 pattern: document.getElementById("pattern").value,
                 letters: knownLetters.split(""),
                 ignore: invalidLetters.split(""),
-                unknowns: unknownPatterns.split("")
+                unknowns: unknownPatterns.split(",")
             })
         })
             .then(x => x.json())
