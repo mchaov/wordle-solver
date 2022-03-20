@@ -1,3 +1,32 @@
 body {
-    background: #cecece;
+  background: #cecece;
+}
+
+.tables {
+  overflow: hidden;
+}
+
+.tbl {
+  float: left;
+  border: 1px solid #666;
+  margin-right: 20px;
+}
+
+.tbl tr:nth-child(odd) td {
+  background: #dedede;
+}
+
+.tbl th,
+.tbl td {
+  padding: 5px 10px;
+}
+
+.tbl th {
+}
+.tbl td {
+}
+
+.red {
+  color: #cc0000;
+  font-weight: bold;
 }

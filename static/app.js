@@ -39,7 +39,7 @@ function renderInputNumberOfLetters(langs, lang, numberOfLetters = 0) {
     `
 }
 
-function renderInputTextPattern(lang, numberOfLetters) {
+function renderInputTextPattern(langs, lang, numberOfLetters) {
     if (lang === "") { return "" }
 
     return `
@@ -55,27 +55,144 @@ function renderInputTextPattern(lang, numberOfLetters) {
 function renderLanguageSelect(langs, lang) {
     return `
     <select id="lang">
-        <option value="-1">Choose language:</option>
         ${Object.keys(langs).map(x => `<option ${x === lang ? "selected" : ""} value="${x}">${x.toLocaleUpperCase()}</option>`).join("")}
     </select>
     `
 }
 
-let state = {
-    lang: "",
-    numberOfLetters: 5
+function renderKnownLetters(langs, lang, knownLetters, numberOfLetters) {
+    if (lang === "") { return "" }
+
+    const letters = [...new Set(knownLetters.split(""))].join("")
+
+    return `
+        Known letters: <input
+            id="knownLetters" 
+            type="text"
+            pattern="${langs[lang].validPattern}{${numberOfLetters}}"
+            value="${letters}">
+    `;
 }
+
+function renderInvalidLetters(langs, lang, invalidLetters, numberOfLetters) {
+    if (lang === "") { return "" }
+
+    const letters = [...new Set(invalidLetters.split(""))].join("")
+
+    return `
+        Invalid letters: <input
+            id="invalidLetters" 
+            type="text"
+            pattern="${langs[lang].validPattern}{${numberOfLetters}}"
+            value="${letters}">
+    `;
+}
+
+function renderUnknownPatterns(lang, unknownPatterns) {
+    if (lang === "") { return "" }
+
+    return `
+        Unknown places: <input
+            id="invalidLetters" 
+            type="text"
+            value="${unknownPatterns}">
+    `;
+}
+
+function renderSubmit(lang) {
+    if (lang === "") { return "" }
+
+    return `
+        <button id="query" type="button">Find</button>
+    `
+}
+
+function renderReset(lang) {
+    if (lang === "") { return "" }
+
+    return `
+        <button id="reset" type="button">Reset</button>
+    `
+}
+
+function renderTable(set, cls1, cls2) {
+    if (!set) { return "" }
+
+    const markup = `
+    <table class="tbl">
+        <thead>
+            <tr>
+                <th>Word</th>
+                <th class="${cls1}">Score 1</th>
+                <th class="${cls2}">Score 2</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${set.map(([word, s1, s2]) => `<tr>
+                <td>${word}</td>
+                <td class="${cls1}">${s1}</td>
+                <td class="${cls2}">${s2}</td>
+            </tr>`).join("")}
+        </tbody>
+    </table>
+    `;
+
+    return markup
+}
+
+function renderResult(lang, result) {
+    console.log(lang === "", result.length === 0)
+    if (lang === "" || result.length === 0) { return "" }
+
+    const [total, set1, set2] = result
+
+    console.log(total, set1, set2)
+
+    return `
+    <h3>Found:</h3>
+    <h4>Total words: ${total}</h4>
+
+    ${renderTable(set1, "red", "")}
+    ${renderTable(set2, "", "red")}
+    `
+}
+
+const initialState = {
+    lang: "en",
+    numberOfLetters: 5,
+    knownLetters: "",
+    invalidLetters: "",
+    unknownPatterns: "",
+    result: []
+}
+
+let state = { ...initialState }
+
+localStorage.getItem("state") && (state = JSON.parse(localStorage.getItem("state")))
 
 // html5 form validity
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/reportValidity
 // uses the pattern field to report if all input match what is expected
 
-function renderMarkup({ lang, numberOfLetters }) {
+function renderMarkup({ lang, numberOfLetters, knownLetters, invalidLetters, unknownPatterns, result }) {
     const markup = `
     <form id="wordConfig">
         ${renderLanguageSelect(langs, lang)}
         ${renderInputNumberOfLetters(langs, lang, numberOfLetters)}
-        ${renderInputTextPattern(lang, numberOfLetters)}
+        ${renderInputTextPattern(langs, lang, numberOfLetters)}
+        <hr/>
+        ${renderKnownLetters(langs, lang, knownLetters, numberOfLetters)}
+        <hr/>
+        ${renderInvalidLetters(langs, lang, invalidLetters, numberOfLetters)}
+        <hr/>
+        ${renderUnknownPatterns(lang, unknownPatterns)}
+        <hr/>
+        ${renderReset(lang)}
+        ${renderSubmit(lang)}
+        <hr/>
+        <div class="tables">
+            ${renderResult(lang, result)}
+        </div>
     </form>
     `;
 
@@ -86,9 +203,46 @@ function changeHandler({ target }) {
 
     if (target.id === "pattern") { return }
 
+    if (target.id === "lang") {
+        state = { ...initialState }
+    }
+
     state[target.id] = target.value
 
+    localStorage.setItem("state", JSON.stringify(state))
+
     renderDOM(state)
+}
+
+function clickHandler({ target }) {
+
+    if (target.id === "query") {
+        const { lang, knownLetters, invalidLetters, unknownPatterns } = state
+
+        fetch("/parse", {
+            method: "POST",
+            body: JSON.stringify({
+                lang: lang,
+                pattern: document.getElementById("pattern").value,
+                letters: knownLetters.split(""),
+                ignore: invalidLetters.split(""),
+                unknowns: unknownPatterns.split("")
+            })
+        })
+            .then(x => x.json())
+            .then(result => {
+                state = { ...state, result }
+                localStorage.setItem("state", JSON.stringify(state))
+                renderDOM(state)
+            })
+    }
+
+    if (target.id === "reset") {
+        state = { ...initialState }
+        localStorage.setItem("state", JSON.stringify(state))
+        renderDOM(state)
+    }
+
 }
 
 function renderDOM(state) {
@@ -100,6 +254,7 @@ function main() {
     renderDOM(state)
 
     document.addEventListener("change", changeHandler)
+    document.addEventListener("click", clickHandler)
 }
 
 window.addEventListener("load", main);
