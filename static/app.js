@@ -39,7 +39,7 @@ function renderInputNumberOfLetters(langs, lang, numberOfLetters = 0) {
     `
 }
 
-function renderInputTextPattern(langs, lang, numberOfLetters) {
+function renderInputTextPattern(langs, lang, numberOfLetters, pattern) {
     if (lang === "") { return "" }
 
     return `
@@ -48,7 +48,8 @@ function renderInputTextPattern(langs, lang, numberOfLetters) {
             type="text"
             required
             pattern="${langs[lang].validPattern}{${numberOfLetters}}"
-            placeholder="${"?".repeat(numberOfLetters)}">
+            placeholder="${"?".repeat(numberOfLetters)}"
+            value=${pattern}>
     `
 }
 
@@ -93,7 +94,7 @@ function renderUnknownPatterns(lang, unknownPatterns) {
 
     return `
         Unknown places: <input
-            id="invalidLetters" 
+            id="unknownPatterns" 
             type="text"
             value="${unknownPatterns}">
     `;
@@ -155,6 +156,7 @@ function renderResult(lang, result) {
 }
 
 const initialState = {
+    pattern: "",
     lang: "en",
     numberOfLetters: 5,
     knownLetters: "",
@@ -171,12 +173,12 @@ localStorage.getItem("state") && (state = JSON.parse(localStorage.getItem("state
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/reportValidity
 // uses the pattern field to report if all input match what is expected
 
-function renderMarkup({ lang, numberOfLetters, knownLetters, invalidLetters, unknownPatterns, result }) {
+function renderMarkup({ lang, numberOfLetters, knownLetters, invalidLetters, unknownPatterns, result, pattern }) {
     const markup = `
     <form id="wordConfig">
         ${renderLanguageSelect(langs, lang)}
         ${renderInputNumberOfLetters(langs, lang, numberOfLetters)}
-        ${renderInputTextPattern(langs, lang, numberOfLetters)}
+        ${renderInputTextPattern(langs, lang, numberOfLetters, pattern)}
         <hr/>
         ${renderKnownLetters(langs, lang, knownLetters, numberOfLetters)}
         <hr/>
@@ -198,8 +200,6 @@ function renderMarkup({ lang, numberOfLetters, knownLetters, invalidLetters, unk
 
 function changeHandler({ target }) {
 
-    if (target.id === "pattern") { return }
-
     if (target.id === "lang") {
         state = { ...initialState }
     }
@@ -214,16 +214,16 @@ function changeHandler({ target }) {
 function clickHandler({ target }) {
 
     if (target.id === "query") {
-        const { lang, knownLetters, invalidLetters, unknownPatterns } = state
+        const { lang, knownLetters, invalidLetters, unknownPatterns, pattern, numberOfLetters } = state
 
         fetch("/parse", {
             method: "POST",
             body: JSON.stringify({
                 lang: lang,
-                pattern: document.getElementById("pattern").value,
-                letters: knownLetters.split(""),
-                ignore: invalidLetters.split(""),
-                unknowns: unknownPatterns.split(",")
+                pattern: pattern === "" ? "?".repeat(numberOfLetters) : pattern,
+                letters: knownLetters.length === 0 ? [] : knownLetters.split(""),
+                ignore: invalidLetters.length === 0 ? [] : invalidLetters.split(""),
+                unknowns: unknownPatterns.length === 0 ? [] : unknownPatterns.split(",")
             })
         })
             .then(x => x.json())
