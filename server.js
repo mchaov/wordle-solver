@@ -46,7 +46,7 @@ function requestListener(req, res) {
     const { headers, method, url } = req
 
     const _headers = {
-        // "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "OPTIONS, GET, POST",
         "Access-Control-Max-Age": 2592000, // 30 days
     };

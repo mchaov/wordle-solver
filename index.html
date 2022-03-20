@@ -9,6 +9,24 @@
   </head>
   <body>
     <div id="app"></div>
+    <hr />
+    <h4>Public API code example:</h4>
+    <code>
+      <pre>
+fetch("/parse", {
+    method: "POST",
+    body: JSON.stringify({
+        lang: "en",
+        pattern: "c????",
+        letters: ["c", "a"],
+        ignore: ["b", "x", "z"],
+        unknowns: ["???a?"]
+    })
+})
+.then(x => x.json())
+.then(console.log)
+      </pre>
+    </code>
     <script async src="static/app.js"></script>
   </body>
 </html>
