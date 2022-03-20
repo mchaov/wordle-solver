@@ -49,7 +49,7 @@ function renderInputTextPattern(langs, lang, numberOfLetters, pattern) {
             required
             pattern="${langs[lang].validPattern}{${numberOfLetters}}"
             placeholder="${"?".repeat(numberOfLetters)}"
-            value=${pattern}>
+            value=${pattern}> // a???? => means the first position is "a"
     `
 }
 
@@ -71,7 +71,7 @@ function renderKnownLetters(langs, lang, knownLetters, numberOfLetters) {
             id="knownLetters" 
             type="text"
             pattern="${langs[lang].validPattern}{${numberOfLetters}}"
-            value="${letters}">
+            value="${letters}"> // abc => means we can have these letters in any position
     `;
 }
 
@@ -85,7 +85,7 @@ function renderInvalidLetters(langs, lang, invalidLetters, numberOfLetters) {
             id="invalidLetters" 
             type="text"
             pattern="${langs[lang].validPattern}{${numberOfLetters}}"
-            value="${letters}">
+            value="${letters}"> // abc => means we can't have these letters in the word
     `;
 }
 
@@ -96,7 +96,7 @@ function renderUnknownPatterns(lang, unknownPatterns) {
         Unknown places: <input
             id="unknownPatterns" 
             type="text"
-            value="${unknownPatterns}">
+            value="${unknownPatterns}"> // ?a???,??a?? => means we can't have "a" in the 2nd or 3rd position
     `;
 }
 
@@ -213,7 +213,6 @@ function changeHandler({ target }) {
     }
 
     state[target.id] = target.value
-
     localStorage.setItem("state", JSON.stringify(state))
 
     renderDOM(state)
