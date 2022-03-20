@@ -167,7 +167,15 @@ const initialState = {
 
 let state = { ...initialState }
 
-localStorage.getItem("state") && (state = JSON.parse(localStorage.getItem("state")))
+if (localStorage.getItem("state")) {
+
+    let oldState = {}
+    try {
+        oldState = JSON.parse(localStorage.getItem("state"))
+    } catch (e) { }
+
+    state = { ...initialState, ...oldState }
+}
 
 // html5 form validity
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/reportValidity
