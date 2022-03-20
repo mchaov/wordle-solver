@@ -2,9 +2,11 @@
   "name": "wordle-solver",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "solve": "node index.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/mchaov/wordle-solver/issues"
   },
-  "homepage": "https://github.com/mchaov/wordle-solver#readme"
+  "homepage": "https://github.com/mchaov/wordle-solver#readme",
+  "dependencies": {
+    "nodemon": "2.0.15"
+  }
 }
