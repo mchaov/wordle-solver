@@ -44,9 +44,9 @@ const unknownLetterMap = {
     bg: "[а-я]"
 }
 
-function scoreRepeatedLetters(result, letters) {
+function scoreRepeatedLetters(words, letters) {
     const repeatedLetters = {}
-    result
+    words
         .join("")
         .toLocaleLowerCase()
         .split("")
@@ -113,8 +113,11 @@ function solve(lang, pattern, letters, ignore, unknowns) {
             const score2 = fixNumber(x.split("")
                 .reduce((a, b) => a + scores[lang][b][1], 0)
             )
+            const score3 = fixNumber(x.split("")
+                .reduce((a, b) => a + repeatedLetters[b], 0)
+            )
 
-            return [x, score, score2]
+            return [x, score, score2, score3]
         })
 
     const totalToPreview = 15
@@ -129,7 +132,12 @@ function solve(lang, pattern, letters, ignore, unknowns) {
         .sort((b, a) => a[2] - b[2])
         .slice(0, totalToPreview)
 
-    return [scored.length, suggestions1, suggestions2]
+    const suggestions3 = scored
+        .slice()
+        .sort((b, a) => a[3] - b[3])
+        .slice(0, totalToPreview)
+
+    return [scored.length, suggestions1, suggestions2, suggestions3]
 }
 
 module.exports = solve

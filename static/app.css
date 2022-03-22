@@ -1,5 +1,6 @@
 body {
-  background: #cecece;
+  font-size: 18px;
+  background: #f0f0f0;
 }
 
 .tables {
@@ -19,14 +20,25 @@ body {
 .tbl th,
 .tbl td {
   padding: 5px 10px;
+  border-right: 1px solid #999;
+  border-bottom: 1px solid #999;
 }
 
-.tbl th {
+.tbl tr:hover td {
+  background: #fff;
+  border-bottom: 1px solid #000;
 }
-.tbl td {
+
+.gray {
+  color: #999;
 }
 
 .red {
-  color: #cc0000;
+  color: #550000;
+  font-weight: bold;
+}
+
+.isRepeated {
+  color: #c70000;
   font-weight: bold;
 }

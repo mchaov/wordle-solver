@@ -11,6 +11,10 @@
 // .then(x => x.json())
 // .then(console.log)
 
+function intersection(arr1, arr2) {
+    return arr1.filter(x => arr2.includes(x))
+}
+
 const langs = {
     en: {
         min: 3,
@@ -116,7 +120,7 @@ function renderReset(lang) {
     `
 }
 
-function renderTable(set, cls1, cls2) {
+function renderTable(set, cls1, cls2, cls3, repeatedWords) {
     if (!set) { return "" }
 
     const markup = `
@@ -126,13 +130,15 @@ function renderTable(set, cls1, cls2) {
                 <th>Word</th>
                 <th class="${cls1}">Score 1</th>
                 <th class="${cls2}">Score 2</th>
+                <th class="${cls3}">Score 3</th>
             </tr>
         </thead>
         <tbody>
-            ${set.map(([word, s1, s2]) => `<tr>
-                <td>${word}</td>
+            ${set.map(([word, s1, s2, s3]) => `<tr>
+                <td class="${repeatedWords.indexOf(word) !== -1 ? "isRepeated" : ""}">${word}</td>
                 <td class="${cls1}">${s1}</td>
                 <td class="${cls2}">${s2}</td>
+                <td class="${cls3}">${s3}</td>
             </tr>`).join("")}
         </tbody>
     </table>
@@ -144,14 +150,30 @@ function renderTable(set, cls1, cls2) {
 function renderResult(lang, result) {
     if (lang === "" || result.length === 0) { return "" }
 
-    const [total, set1, set2] = result
+    const [total, set1, set2, set3] = result
+
+    const intersec = [...new Set([
+        ...intersection(
+            set1.map(x => x[0]),
+            set2.map(x => x[0]),
+        ),
+        ...intersection(
+            set1.map(x => x[0]),
+            set3.map(x => x[0])
+        ),
+        ...intersection(
+            set2.map(x => x[0]),
+            set3.map(x => x[0])
+        )
+    ])]
 
     return `
     <h3>Found:</h3>
     <h4>Total words: ${total}</h4>
 
-    ${renderTable(set1, "red", "")}
-    ${renderTable(set2, "", "red")}
+    ${renderTable(set1, "red", "gray", "gray", intersec)}
+    ${renderTable(set2, "gray", "red", "gray", intersec)}
+    ${renderTable(set3, "gray", "gray", "red", intersec)}
     `
 }
 
