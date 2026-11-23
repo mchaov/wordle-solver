@@ -4,6 +4,7 @@ const solve = require("./solver.js")
 
 const staticDir = path.resolve(__dirname, "static");
 const js = readFileSync(path.join(staticDir, "app.js")).toString();
+const cluesModule = readFileSync(path.join(staticDir, "clues.mjs")).toString();
 const css = readFileSync(path.join(staticDir, "app.css")).toString();
 const index = readFileSync(path.resolve(__dirname, "index.html")).toString();
 
@@ -71,13 +72,14 @@ function requestListener(req, res) {
         return;
     }
 
-    if (url.match(/app\.js/)) {
+    const servesClues = url.split("?")[0] === "/static/clues.mjs"
+    if (servesClues || url.match(/app\.js/)) {
         res.writeHead(200, {
             ..._headers,
             "Content-Type": "application/javascript"
         });
         res.statusCode = 200
-        res.write(js)
+        res.write(servesClues ? cluesModule : js)
         res.end()
         return;
     }

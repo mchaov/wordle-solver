@@ -1,17 +1,6 @@
-const { readFileSync } = require("node:fs")
-const path = require("node:path")
 const enScores = require("./words/en.scores")
 const bgScores = require("./words/bg.scores")
 const alphabets = { en: new Set(Object.keys(enScores)), bg: new Set(Object.keys(bgScores)) }
-
-function englishFiveLetterWords() {
-    const text = readFileSync(path.join(__dirname, "words", "en.words.txt"), "utf8")
-    const entries = text.match(/^[a-z]{5}$/gim) || []
-    return [...new Set([
-        ...require("./words/words/english5.json"),
-        ...entries.map(word => word.toLowerCase())
-    ])]
-}
 
 function countLetters(letters) {
     const counts = new Map()
@@ -33,7 +22,7 @@ function prepareWords(words, scores) {
 
 const dictionaries = {
     en: {
-        5: prepareWords(englishFiveLetterWords(), enScores),
+        5: prepareWords(require("./words/words/english5.json"), enScores),
         6: prepareWords(require("./words/words/english6.json"), enScores)
     },
     bg: {

@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "solve": "node index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:browser": "node --test e2e/guess-board.cjs"
   },
   "repository": {
     "type": "git",
@@ -20,6 +21,7 @@
   },
   "homepage": "https://github.com/mchaov/wordle-solver#readme",
   "devDependencies": {
-    "nodemon": "2.0.15"
+    "nodemon": "2.0.15",
+    "playwright": "1.59.1"
   }
 }

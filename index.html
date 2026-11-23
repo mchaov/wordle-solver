@@ -1,90 +1,120 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Word finder</title>
-    <link rel="stylesheet" href="static/app.css" />
-    <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-ELJRGTF52B"
-    ></script>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#faf9f6">
+    <title>Guess Board · Wordle solver</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ELJRGTF52B"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-
-      gtag("config", "G-ELJRGTF52B");
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag("js", new Date());
+        gtag("config", "G-ELJRGTF52B");
     </script>
-  </head>
-  <body>
-    <form id="wordConfig">
-      <label>Language
-        <select id="lang"><option value="en">EN</option><option value="bg">BG</option></select>
-      </label>
-      <label>Word length
-        <select id="numberOfLetters"><option>5</option><option>6</option></select>
-      </label>
-      <label>Pattern <input id="pattern" type="text" placeholder="?????" spellcheck="false"></label>
-      Use ? for each unknown letter.
-      <hr>
-      <label>Known letters <input id="knownLetters" type="text" spellcheck="false"></label>
-      Repeat a letter for each confirmed copy. Copies in the pattern count toward this total.
-      <hr>
-      <label>Invalid letters <input id="invalidLetters" type="text" spellcheck="false"></label>
-      Enter gray letters here. A gray letter rules out any copies beyond those already confirmed.
-      <hr>
-      <label>Impossible places <input id="unknownPatterns" type="text" spellcheck="false"></label>
-      Use comma-separated patterns such as ?a???, ??a??.
-      <hr>
-      <button type="button" id="reset">Reset</button>
-      <button type="submit" id="query">Find</button>
-    </form>
-    <p id="queryError" role="alert"></p>
-    <div class="tables" aria-live="polite"></div>
-    <hr />
-    <legend>
-      <p>
-        SCORE 1 => scored based on letter frequency in the remaining set of
-        words based on unique letters in the word
-      </p>
-      <p>SCORE 2 => scored based on language letter frequency</p>
-      <p>
-        SCORE 3 => scored based on letter frequency in the remaining set of
-        words
-      </p>
-      <p>
-        <span class="red">9999</span> => the color of the column used for sorting
-      </p>
-      <p>
-        <span class="gray">9999</span> => color of reference from other scoring methods
-      </p>
-      <p>
-        <span class="isRepeated">WORD</span> => word exist in more than one of the shortlisted sets
-      </p>
-    </legend>
-    <hr />
-    <h4>Public API code example:</h4>
-    <code>
-      <pre>
-fetch("/parse", {
-    method: "POST",
-    body: JSON.stringify({
-        lang: "en",
-        pattern: "c????",
-        letters: ["c", "a"],
-        ignore: ["b", "x", "z"],
-        unknowns: ["???a?"]
-    })
-})
-.then(x => x.json())
-.then(console.log)
-      </pre>
-    </code>
-    <script defer src="static/app.js"></script>
-  </body>
+    <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+<main>
+    <header class="masthead">
+        <div>
+            <h1>Guess Board</h1>
+            <div class="settings">
+                <select id="lang" aria-label="Language">
+                    <option value="en">EN</option><option value="bg">BG</option>
+                </select>
+                <span aria-hidden="true">·</span>
+                <select id="numberOfLetters" aria-label="Word length">
+                    <option value="5">5 letters</option><option value="6">6 letters</option>
+                </select>
+            </div>
+        </div>
+        <button id="newPuzzle" class="secondary" type="button"><span aria-hidden="true">＋</span> New puzzle</button>
+    </header>
+
+    <div class="workspace">
+        <section class="board" aria-label="Guess board">
+            <p id="clueError" class="error" role="alert" tabindex="-1"></p>
+            <div id="history"></div>
+            <form id="editor" novalidate>
+                <div class="section-heading">
+                    <h2 id="guessHeading">Guess 1</h2>
+                    <button id="cancelEdit" class="text-button" type="button" hidden>Cancel edit</button>
+                </div>
+                <label class="visually-hidden" for="word">Your guess</label>
+                <input id="word" type="text" placeholder="Type or paste your guess" autocomplete="off"
+                    autocapitalize="characters" autocorrect="off" spellcheck="false" aria-describedby="guessError">
+                <div id="tiles" class="tile-row" role="group" aria-label="Mark letters in your guess" aria-describedby="gestures"></div>
+                <p id="gestures" class="hint">
+                    <span class="mouse-hint">Left-click for in place. Right-click for elsewhere. Leave absent letters gray.</span>
+                    <span class="touch-hint">Tap a tile, then choose its feedback. Leave absent letters gray.</span>
+                    <span class="key-hint">Use ← → to select a tile, G for in place, Y for elsewhere and Delete to clear.</span>
+                </p>
+                <div class="mark-tools" role="group" aria-label="Feedback for selected tile">
+                    <button type="button" data-set="correct"><span class="swatch correct" aria-hidden="true">✓</span>In place</button>
+                    <button type="button" data-set="elsewhere"><span class="swatch elsewhere" aria-hidden="true">↔</span>Elsewhere</button>
+                    <button type="button" data-set="absent"><span class="swatch absent" aria-hidden="true">−</span>Clear mark</button>
+                </div>
+                <p id="guessError" class="error" role="alert"></p>
+                <button id="applyFeedback" type="submit" class="primary">Apply feedback</button>
+            </form>
+
+            <details id="advanced">
+                <summary>Advanced clues<span class="chevron" aria-hidden="true"></span></summary>
+                <form id="manual" novalidate>
+                    <label for="pattern">Pattern</label>
+                    <input id="pattern" type="text" placeholder="?????" aria-describedby="patternHint">
+                    <small id="patternHint">Use ? for each unknown position.</small>
+                    <label for="knownLetters">Known letters</label>
+                    <input id="knownLetters" type="text" aria-describedby="knownHint">
+                    <small id="knownHint">Repeat a letter for each confirmed copy.</small>
+                    <label for="invalidLetters">Invalid letters</label>
+                    <input id="invalidLetters" type="text" aria-describedby="invalidHint">
+                    <small id="invalidHint">Gray rules out extra copies of a confirmed letter.</small>
+                    <label for="unknownPatterns">Impossible places</label>
+                    <input id="unknownPatterns" type="text" aria-describedby="unknownHint">
+                    <small id="unknownHint"></small>
+                    <button type="submit" class="secondary">Apply clues</button>
+                </form>
+            </details>
+        </section>
+
+        <section id="results" class="results" aria-labelledby="matchCount">
+            <div class="result-heading">
+                <h2 id="matchCount" aria-live="polite" tabindex="-1">Matches</h2>
+                <p id="resultHint" class="hint"></p>
+            </div>
+            <p id="searchError" class="error" role="alert" tabindex="-1"></p>
+            <button type="button" id="retry" class="secondary" hidden>Try again</button>
+            <div id="scoredResults" hidden>
+                <details id="scoreGuide">
+                    <summary>How scores work<span class="chevron" aria-hidden="true"></span></summary>
+                    <p>Each rule has its own scale. Higher scores rank first within a column. Bold values mark that rule’s top 15.</p>
+                    <dl>
+                        <dt>Coverage · Score 1</dt>
+                        <dd>Favors guesses that test several common letters. Each distinct unconfirmed letter earns points for how often it occurs in the remaining matches.</dd>
+                        <dt>Language · Score 2</dt>
+                        <dd>Adds the language-wide frequency weight of every letter in the guess, including repeated letters.</dd>
+                        <dt>All letters · Score 3</dt>
+                        <dd>Uses the same frequencies as Coverage, counting each copy of an unconfirmed letter. A double letter earns its points twice.</dd>
+                    </dl>
+                </details>
+                <table id="scoreTable">
+                    <caption class="visually-hidden">Suggested words and their scores, highest first for the selected rule</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Word</th>
+                            <th scope="col" aria-sort="descending"><button type="button" aria-label="Rank by coverage">Coverage</button></th>
+                            <th scope="col"><button type="button" aria-label="Rank by language">Language</button></th>
+                            <th scope="col"><button type="button" aria-label="Rank by all letters">All letters</button></th>
+                        </tr>
+                    </thead>
+                    <tbody id="matches"></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</main>
+</body>
 </html>
