@@ -1,286 +1,144 @@
-// fetch("http://localhost:5000/parse", {
-//     method: "POST",
-//     body: JSON.stringify({
-//         lang: "bg",
-//         pattern: "пре?а",
-//         letters: ["е", "а", "п", "р"],
-//         ignore: ["о", "к", "н", "с"],
-//         unknowns: ["???а?"]
-//     })
-// })
-// .then(x => x.json())
-// .then(console.log)
+const form = document.getElementById("wordConfig")
+const fields = ["lang", "numberOfLetters", "pattern", "knownLetters", "invalidLetters", "unknownPatterns"]
+const results = document.querySelector(".tables")
+const errorMessage = document.getElementById("queryError")
+let pendingSearch
 
-function intersection(arr1, arr2) {
-    return arr1.filter(x => arr2.includes(x))
+function readClues() {
+    return Object.fromEntries(fields.map(id => [id, form.elements.namedItem(id).value]))
 }
 
-const langs = {
-    en: {
-        min: 3,
-        max: 45,
-        default: 5,
-        validPattern: "[a-z]"
-    },
-    bg: {
-        min: 3,
-        max: 39,
-        default: 5,
-        validPattern: "[а-я]"
+function populateForm(saved = {}) {
+    for (const id of fields) {
+        form.elements.namedItem(id).value = typeof saved[id] === "string" ? saved[id] : ""
     }
+    form.elements.lang.value = saved.lang === "bg" ? "bg" : "en"
+    form.elements.numberOfLetters.value = Number(saved.numberOfLetters) === 6 ? "6" : "5"
+    form.elements.pattern.placeholder = "?".repeat(Number(form.elements.numberOfLetters.value))
 }
 
-function renderInputNumberOfLetters(langs, lang, numberOfLetters = 0) {
-    if (lang === "") { return "" }
-
-    return `
-        <input 
-            id="numberOfLetters" 
-            type="number" 
-            min="${langs[lang].min}" 
-            max="${langs[lang].max}" 
-            value="${numberOfLetters || langs[lang].default}">
-    `
-}
-
-function renderInputTextPattern(langs, lang, numberOfLetters, pattern) {
-    if (lang === "") { return "" }
-
-    return `
-        <input 
-            id="pattern"
-            type="text"
-            required
-            pattern="${langs[lang].validPattern}{${numberOfLetters}}"
-            placeholder="${"?".repeat(numberOfLetters)}"
-            value=${pattern}> // a???? => means the first position is "a"
-    `
-}
-
-function renderLanguageSelect(langs, lang) {
-    return `
-    <select id="lang">
-        ${Object.keys(langs).map(x => `<option ${x === lang ? "selected" : ""} value="${x}">${x.toLocaleUpperCase()}</option>`).join("")}
-    </select>
-    `
-}
-
-function renderKnownLetters(langs, lang, knownLetters, numberOfLetters) {
-    if (lang === "") { return "" }
-
-    const letters = [...new Set(knownLetters.split(""))].join("")
-
-    return `
-        Known letters: <input
-            id="knownLetters" 
-            type="text"
-            pattern="${langs[lang].validPattern}{${numberOfLetters}}"
-            value="${letters}"> // abc => means we can have these letters in any position
-    `;
-}
-
-function renderInvalidLetters(langs, lang, invalidLetters, numberOfLetters) {
-    if (lang === "") { return "" }
-
-    const letters = [...new Set(invalidLetters.split(""))].join("")
-
-    return `
-        Invalid letters: <input
-            id="invalidLetters" 
-            type="text"
-            pattern="${langs[lang].validPattern}{${numberOfLetters}}"
-            value="${letters}"> // abc => means we can't have these letters in the word
-    `;
-}
-
-function renderUnknownPatterns(lang, unknownPatterns) {
-    if (lang === "") { return "" }
-
-    return `
-        Impossible places: <input
-            id="unknownPatterns" 
-            type="text"
-            value="${unknownPatterns}"> // ?a???,??a?? => means we can't have "a" in the 2nd or 3rd position
-    `;
-}
-
-function renderSubmit(lang) {
-    if (lang === "") { return "" }
-
-    return `
-        <button id="query" type="button">Find</button>
-    `
-}
-
-function renderReset(lang) {
-    if (lang === "") { return "" }
-
-    return `
-        <button id="reset" type="button">Reset</button>
-    `
-}
-
-function renderTable(set, cls1, cls2, cls3, repeatedWords) {
-    if (!set) { return "" }
-
-    const markup = `
-    <table class="tbl">
-        <thead>
-            <tr>
-                <th>Word</th>
-                <th class="${cls1}">Score 1</th>
-                <th class="${cls2}">Score 2</th>
-                <th class="${cls3}">Score 3</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${set.map(([word, s1, s2, s3]) => `<tr>
-                <td class="${repeatedWords.indexOf(word) !== -1 ? "isRepeated" : ""}">${word}</td>
-                <td class="${cls1}">${s1}</td>
-                <td class="${cls2}">${s2}</td>
-                <td class="${cls3}">${s3}</td>
-            </tr>`).join("")}
-        </tbody>
-    </table>
-    `;
-
-    return markup
-}
-
-function renderResult(lang, result) {
-    if (lang === "" || result.length === 0) { return "" }
-
-    const [total, set1, set2, set3] = result
-
-    const intersec = [...new Set([
-        ...intersection(
-            set1.map(x => x[0]),
-            set2.map(x => x[0]),
-        ),
-        ...intersection(
-            set1.map(x => x[0]),
-            set3.map(x => x[0])
-        ),
-        ...intersection(
-            set2.map(x => x[0]),
-            set3.map(x => x[0])
-        )
-    ])]
-
-    return `
-    <h3>Found:</h3>
-    <h4>Total words: ${total}</h4>
-
-    ${renderTable(set1, "red", "gray", "gray", intersec)}
-    ${renderTable(set2, "gray", "red", "gray", intersec)}
-    ${renderTable(set3, "gray", "gray", "red", intersec)}
-    `
-}
-
-const initialState = {
-    pattern: "",
-    lang: "en",
-    numberOfLetters: 5,
-    knownLetters: "",
-    invalidLetters: "",
-    unknownPatterns: "",
-    result: []
-}
-
-let state = { ...initialState }
-
-if (localStorage.getItem("state")) {
-
-    let oldState = {}
+function saveClues(searched) {
     try {
-        oldState = JSON.parse(localStorage.getItem("state"))
-    } catch (e) { }
-
-    state = { ...initialState, ...oldState }
+        localStorage.setItem("state", JSON.stringify({ ...readClues(), searched }))
+    } catch {
+        // Searching also works when browser storage is unavailable.
+    }
 }
 
-// html5 form validity
-// https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/reportValidity
-// uses the pattern field to report if all input match what is expected
-
-function renderMarkup({ lang, numberOfLetters, knownLetters, invalidLetters, unknownPatterns, result, pattern }) {
-    const markup = `
-    <form id="wordConfig">
-        ${renderLanguageSelect(langs, lang)}
-        ${renderInputNumberOfLetters(langs, lang, numberOfLetters)}
-        ${renderInputTextPattern(langs, lang, numberOfLetters, pattern)}
-        <hr/>
-        ${renderKnownLetters(langs, lang, knownLetters, numberOfLetters)}
-        <hr/>
-        ${renderInvalidLetters(langs, lang, invalidLetters, numberOfLetters)}
-        <hr/>
-        ${renderUnknownPatterns(lang, unknownPatterns)}
-        <hr/>
-        ${renderReset(lang)}
-        ${renderSubmit(lang)}
-        <hr/>
-        <div class="tables">
-            ${renderResult(lang, result)}
-        </div>
-    </form>
-    `;
-
-    return markup
+function clearResults() {
+    if (pendingSearch) pendingSearch.abort()
+    pendingSearch = undefined
+    errorMessage.textContent = ""
+    results.replaceChildren()
+    results.removeAttribute("aria-busy")
 }
 
-function changeHandler({ target }) {
+function scoreTable(rows, ranking, appearances) {
+    const table = document.createElement("table")
+    table.className = "tbl"
+    const header = table.createTHead().insertRow()
+    for (const [index, title] of ["Word", "Score 1", "Score 2", "Score 3"].entries()) {
+        const cell = document.createElement("th")
+        cell.scope = "col"
+        cell.textContent = title
+        if (index) cell.className = index === ranking ? "red" : "gray"
+        header.append(cell)
+    }
+    const body = table.createTBody()
+    for (const scores of rows) {
+        const row = body.insertRow()
+        for (const [index, value] of scores.entries()) {
+            const cell = row.insertCell()
+            cell.textContent = value
+            if (index) cell.className = index === ranking ? "red" : "gray"
+            else if (appearances.get(value) > 1) cell.className = "isRepeated"
+        }
+    }
+    return table
+}
 
-    if (target.id === "lang") {
-        state = { ...initialState }
+function showResults([total, ...rankings]) {
+    const heading = document.createElement("h3")
+    heading.textContent = total ? "Total words: " + total : "No words match these clues."
+    results.replaceChildren(heading)
+    if (!total) return
+
+    const appearances = new Map()
+    for (const rows of rankings) {
+        for (const word of new Set(rows.map(row => row[0]))) {
+            appearances.set(word, (appearances.get(word) || 0) + 1)
+        }
+    }
+    rankings.forEach((rows, index) => results.append(scoreTable(rows, index + 1, appearances)))
+}
+
+async function search() {
+    clearResults()
+    const clues = readClues()
+    const length = Number(clues.numberOfLetters)
+    const pattern = clues.pattern.trim() || "?".repeat(length)
+    if (pattern.length !== length) {
+        errorMessage.textContent = "The pattern needs " + length + " positions. Use ? for each unknown letter."
+        return
     }
 
-    state[target.id] = target.value
-    localStorage.setItem("state", JSON.stringify(state))
-
-    renderDOM(state)
-}
-
-function clickHandler({ target }) {
-
-    if (target.id === "query") {
-        const { lang, knownLetters, invalidLetters, unknownPatterns, pattern, numberOfLetters } = state
-
-        fetch("/parse", {
+    const request = new AbortController()
+    pendingSearch = request
+    results.setAttribute("aria-busy", "true")
+    try {
+        const response = await fetch("/parse", {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: request.signal,
             body: JSON.stringify({
-                lang: lang,
-                pattern: pattern === "" ? "?".repeat(numberOfLetters) : pattern,
-                letters: knownLetters.length === 0 ? [] : knownLetters.split(""),
-                ignore: invalidLetters.length === 0 ? [] : invalidLetters.split(""),
-                unknowns: unknownPatterns.length === 0 ? [] : unknownPatterns.split(",")
+                lang: clues.lang,
+                pattern,
+                letters: [...clues.knownLetters.trim()],
+                ignore: [...clues.invalidLetters.trim()],
+                unknowns: clues.unknownPatterns.split(",").map(mask => mask.trim()).filter(Boolean)
             })
         })
-            .then(x => x.json())
-            .then(result => {
-                state = { ...state, result }
-                localStorage.setItem("state", JSON.stringify(state))
-                renderDOM(state)
-            })
+        const payload = await response.json()
+        if (pendingSearch !== request) return
+        if (!response.ok) {
+            errorMessage.textContent = payload.error || "The word search could not be completed."
+            return
+        }
+        showResults(payload)
+        saveClues(true)
+    } catch {
+        if (pendingSearch === request) errorMessage.textContent = "Could not reach the solver. Try Find again."
+    } finally {
+        if (pendingSearch === request) {
+            pendingSearch = undefined
+            results.removeAttribute("aria-busy")
+        }
     }
-
-    if (target.id === "reset") {
-        state = { ...initialState }
-        localStorage.setItem("state", JSON.stringify(state))
-        renderDOM(state)
-    }
-
 }
 
-function renderDOM(state) {
-    const domApp = document.getElementById("app")
-    domApp.innerHTML = renderMarkup(state);
+form.addEventListener("input", ({ target }) => {
+    if (target.id === "lang") populateForm({ lang: target.value })
+    if (target.id === "numberOfLetters") form.elements.pattern.placeholder = "?".repeat(Number(target.value))
+    clearResults()
+    saveClues(false)
+})
+
+form.addEventListener("submit", event => {
+    event.preventDefault()
+    search()
+})
+
+document.getElementById("reset").addEventListener("click", () => {
+    clearResults()
+    populateForm()
+    saveClues(false)
+})
+
+let saved
+try {
+    saved = JSON.parse(localStorage.getItem("state"))
+} catch {
+    // A saved search is optional.
 }
-
-function main() {
-    renderDOM(state)
-
-    document.addEventListener("change", changeHandler)
-    document.addEventListener("click", clickHandler)
-}
-
-window.addEventListener("load", main);
+populateForm(saved || {})
+if (saved && (saved.searched === true || (Array.isArray(saved.result) && saved.result.length))) search()

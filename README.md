@@ -1,79 +1,34 @@
 # wordle-solver
 
-- [wordle-solver](#wordle-solver)
-  - [Usage](#usage)
+Find and rank English or Bulgarian words that match your Wordle clues. Both languages support five and six letters.
 
 ## Usage
 
-```bash
-###########################################################################
-## Command form: npm run start en c???? has=a,r not=t,i unknown=?a???,??a??
-###########################################################################
+Run `npm start` and open `http://localhost:5000` for the web form. To search from the command line, run
 
-# en                  - supported languages: en|bg
-# c????               - pattern + length, ? denoting unknown letter
-# has=a,r             - alphabet, known letters, unknown position
-# not=t,i             - letters that aren't in the word
-# unknown=?a???,??a?? - known letters but not possible positions
-
-npm run start c???? has=a,r not=t,i, unknown=?a???,??a??
-
-# output:
-
-Your input:
-lang: en
-pattern: c????
-letters: a,r
-ignore: t,i
-
-Devised patterns:
-concreteLetters: /c[a-z][a-z][a-z][a-z]/gim
-randomPlaceLetters: /(?=.*a)(?=.*r).*/gim
-ignoredLetters: /((?![t,i]).)*$/gim
-
-### Scoring 1:
-┌─────────┬─────────┬────┬────────┐
-│ (index) │    0    │ 1  │   2    │
-├─────────┼─────────┼────┼────────┤
-│    0    │ 'ceral' │ 31 │ 189.94 │
-│    1    │ 'clear' │ 31 │ 189.94 │
-│    2    │ 'ceras' │ 30 │ 191.19 │
-│    3    │ 'coran' │ 30 │ 175.51 │
-│    4    │ 'cread' │ 30 │ 179.21 │
-│    5    │ 'creak' │ 30 │ 167.57 │
-│    6    │ 'cream' │ 30 │ 177.32 │
-│    7    │ 'creda' │ 30 │ 179.21 │
-│    8    │ 'crena' │ 30 │ 195.88 │
-│    9    │ 'croak' │ 30 │ 147.2  │
-│   10    │ 'crosa' │ 30 │ 170.82 │
-│   11    │ 'copra' │ 29 │ 157.73 │
-│   12    │ 'corah' │ 29 │ 156.9  │
-│   13    │ 'coroa' │ 28 │ 178.1  │
-│   14    │ 'crcao' │ 28 │ 164.72 │
-└─────────┴─────────┴────┴────────┘
-### Scoring 2:
-┌─────────┬─────────┬────┬────────┐
-│ (index) │    0    │ 1  │   2    │
-├─────────┼─────────┼────┼────────┤
-│    0    │ 'crena' │ 30 │ 195.88 │
-│    1    │ 'ceras' │ 30 │ 191.19 │
-│    2    │ 'ceral' │ 31 │ 189.94 │
-│    3    │ 'clear' │ 31 │ 189.94 │
-│    4    │ 'cread' │ 30 │ 179.21 │
-│    5    │ 'creda' │ 30 │ 179.21 │
-│    6    │ 'coroa' │ 28 │ 178.1  │
-│    7    │ 'cream' │ 30 │ 177.32 │
-│    8    │ 'coran' │ 30 │ 175.51 │
-│    9    │ 'crosa' │ 30 │ 170.82 │
-│   10    │ 'creak' │ 30 │ 167.57 │
-│   11    │ 'crcao' │ 28 │ 164.72 │
-│   12    │ 'crura' │ 23 │ 162.23 │
-│   13    │ 'copra' │ 29 │ 157.73 │
-│   14    │ 'corah' │ 29 │ 156.9  │
-└─────────┴─────────┴────┴────────┘
+```sh
+npm run solve -- en "sw?on"
+npm run solve -- en "?????" has=l,o,r,d not=c,e,a,s,w
+npm run solve -- en "????t" has=t,l,e not=c,a,r,s,o,i,n,f
+npm run solve -- en "c????" has=a,r not=t,i "unknown=?a???,??a??"
 ```
 
-In the output you will get a sorted by highest score list of tuples [word, score, score].
+The first search returns `swoon`. The second includes `drool` and `droll`. The third includes `veldt`.
+
+- The pattern fixes letter positions. Each `?` matches one letter.
+- `has` requires letters anywhere in the word. Repeat a letter for each confirmed copy. The solver uses the larger of its counts in `has` and in the pattern.
+- `not` records gray letters. A gray letter has exactly the confirmed number of copies, which can be zero. For example, `has=p,a,s not=e,t,u,r,a` allows exactly one `a`.
+- `unknown` lists forbidden positions. For example, `?a???,??a??` excludes `a` in the second and third positions.
+
+## Dictionaries and rankings
+
+Five-letter English searches include every five-letter A–Z entry in `words/en.words.txt`, including names and abbreviations. The solver lowercases and deduplicates entries and also includes the existing `words/words/english5.json` candidates. English six-letter searches and both Bulgarian word lengths use the corresponding JSON lists in `words/words/`.
+
+The browser shows up to 15 words per ranking. Score 1 counts each distinct letter using its frequency among the remaining candidates. Score 2 uses language-wide letter weights. Score 3 counts every occurrence of a letter using the remaining candidates. Explicitly required letters contribute zero to scores 1 and 3. The CLI displays the first two rankings.
+
+`POST /parse` accepts `lang`, `pattern`, `letters`, `ignore`, and `unknowns`. Each entry in `letters` represents one confirmed copy. Entries in `ignore` mark gray letters. A successful response contains `[total, ranking1, ranking2, ranking3]`. Each ranked row contains `[word, score1, score2, score3]`. Invalid clue formats return HTTP 422 with an `error` message. A valid search with no matches returns `[0, [], [], []]`.
+
+Run `npm test` for the regression tests.
 
 Heuristics for English language are taken from [here](https://www3.nd.edu/~busiforc/handouts/cryptography/letterfrequencies.html).
 

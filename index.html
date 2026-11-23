@@ -22,7 +22,30 @@
     </script>
   </head>
   <body>
-    <div id="app"></div>
+    <form id="wordConfig">
+      <label>Language
+        <select id="lang"><option value="en">EN</option><option value="bg">BG</option></select>
+      </label>
+      <label>Word length
+        <select id="numberOfLetters"><option>5</option><option>6</option></select>
+      </label>
+      <label>Pattern <input id="pattern" type="text" placeholder="?????" spellcheck="false"></label>
+      Use ? for each unknown letter.
+      <hr>
+      <label>Known letters <input id="knownLetters" type="text" spellcheck="false"></label>
+      Repeat a letter for each confirmed copy. Copies in the pattern count toward this total.
+      <hr>
+      <label>Invalid letters <input id="invalidLetters" type="text" spellcheck="false"></label>
+      Enter gray letters here. A gray letter rules out any copies beyond those already confirmed.
+      <hr>
+      <label>Impossible places <input id="unknownPatterns" type="text" spellcheck="false"></label>
+      Use comma-separated patterns such as ?a???, ??a??.
+      <hr>
+      <button type="button" id="reset">Reset</button>
+      <button type="submit" id="query">Find</button>
+    </form>
+    <p id="queryError" role="alert"></p>
+    <div class="tables" aria-live="polite"></div>
     <hr />
     <legend>
       <p>
@@ -62,6 +85,6 @@ fetch("/parse", {
 .then(console.log)
       </pre>
     </code>
-    <script async src="static/app.js"></script>
+    <script defer src="static/app.js"></script>
   </body>
 </html>

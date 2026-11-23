@@ -1,143 +1,120 @@
-const readFileSync = require('fs').readFileSync;
-const path = require('path');
+const { readFileSync } = require("node:fs")
+const path = require("node:path")
+const enScores = require("./words/en.scores")
+const bgScores = require("./words/bg.scores")
+const alphabets = { en: new Set(Object.keys(enScores)), bg: new Set(Object.keys(bgScores)) }
 
-const enScores = require('./words/en.scores');
-const bgScores = require('./words/bg.scores');
-const scores = { en: enScores, bg: bgScores }
-
-const bg5 = path.join(__dirname, "words", "words", `words_curated.json`);
-const bg6 = path.join(__dirname, "words", "words", `words6_curated.json`);
-const en5 = path.join(__dirname, "words", "words", `english5.json`);
-const en6 = path.join(__dirname, "words", "words", `english6.json`);
-const curatedList = {
-    bg: [...JSON.parse(readFileSync(bg5, "utf8")), ...JSON.parse(readFileSync(bg6, "utf8"))],
-    en: [...JSON.parse(readFileSync(en5, "utf8")), ...JSON.parse(readFileSync(en6, "utf8"))]
+function englishFiveLetterWords() {
+    const text = readFileSync(path.join(__dirname, "words", "en.words.txt"), "utf8")
+    const entries = text.match(/^[a-z]{5}$/gim) || []
+    return [...new Set([
+        ...require("./words/words/english5.json"),
+        ...entries.map(word => word.toLowerCase())
+    ])]
 }
 
-// const wordsFilePath = path.join(__dirname, "words", `${lang}.words.txt`);
-// const words = readFileSync(wordsFilePath, "utf8")
-//     .split("\n")
-//     .filter(x => x === x.toLocaleLowerCase())
-
-function makeHasPattern(arr) {
-    return arr.map(x => `(?=.*${x})`).join("")
+function countLetters(letters) {
+    const counts = new Map()
+    for (const letter of letters) counts.set(letter, (counts.get(letter) || 0) + 1)
+    return counts
 }
 
-function makeHasNotPattern(arr) {
-    return `((?![${arr.join(",")}]).)*$`
+function prepareWords(words, scores) {
+    return words.map(word => {
+        let languageScore = 0
+        for (const letter of word) languageScore += scores[letter][1]
+        return {
+            word,
+            letterCounts: countLetters(word),
+            languageScore: Number(languageScore.toFixed(2))
+        }
+    })
 }
 
-function makeExactMatchPattern(pat, lang) {
-    return new RegExp(
-        pat
-            .replaceAll("?", unknownLetterMap[lang]),
-        "gim"
-    )
+const dictionaries = {
+    en: {
+        5: prepareWords(englishFiveLetterWords(), enScores),
+        6: prepareWords(require("./words/words/english6.json"), enScores)
+    },
+    bg: {
+        5: prepareWords(require("./words/words/words_curated.json"), bgScores),
+        6: prepareWords(require("./words/words/words6_curated.json"), bgScores)
+    }
 }
 
-function fixNumber(number, fix = 2) {
-    return parseFloat(number.toFixed(fix))
+class ClueError extends Error {}
+
+function matchesPattern(word, pattern) {
+    for (let i = 0; i < pattern.length; i++) {
+        if (pattern[i] !== "?" && pattern[i] !== word[i]) return false
+    }
+    return true
 }
 
-const unknownLetterMap = {
-    en: "[a-z]",
-    bg: "[а-я]"
+function matchesLetterLimits(counts, limits) {
+    for (const { letter, minimum, maximum } of limits) {
+        const count = counts.get(letter) || 0
+        if (count < minimum || count > maximum) return false
+    }
+    return true
 }
 
-function scoreRepeatedLetters(words, letters) {
-    const repeatedLetters = {}
-    words
-        .join("")
-        .toLocaleLowerCase()
-        .split("")
-        .forEach(x => {
-            if (!repeatedLetters[x]) {
-                repeatedLetters[x] = 0
-            }
-            if (letters.indexOf(x) === -1) {
-                repeatedLetters[x] += 1
-            }
-        })
-
-    return repeatedLetters
+function normalizeLetters(values, alphabet) {
+    if (!Array.isArray(values) || !values.every(value =>
+        typeof value === "string" && value.length === 1 && alphabet.has(value.toLowerCase())
+    )) {
+        throw new ClueError("Use individual letters from the selected language for Known letters and Invalid letters.")
+    }
+    return values.map(value => value.toLowerCase())
 }
 
-function solve(lang, pattern, letters, ignore, unknowns) {
-
-    words = curatedList[lang]
-
-    if (!scores[lang]) {
-        words
-            .join("")
-            .toLocaleLowerCase()
-            .split("")
-            .forEach(x => {
-                if (!scores[lang][x]) {
-                    scores[lang][x] = [0, 0]
-                }
-                scores[lang][x][0] += 1
-                scores[lang][x][1] += 1
-            })
+function solve(lang, pattern, letters = [], ignore = [], unknowns = []) {
+    if (lang !== "en" && lang !== "bg") throw new ClueError("Choose English (en) or Bulgarian (bg).")
+    const alphabet = alphabets[lang]
+    const validPattern = value => typeof value === "string" && value.length > 0 &&
+        [...value].every(c => c === "?" || alphabet.has(c.toLowerCase()))
+    if (!validPattern(pattern)) throw new ClueError("Use letters and ? in the word pattern.")
+    if (!Array.isArray(unknowns) || !unknowns.every(mask => validPattern(mask) && mask.length === pattern.length)) {
+        throw new ClueError("Each Impossible places pattern must have the same length as the word.")
     }
 
-    const concreteLetters = makeExactMatchPattern(pattern, lang);
-    const ignoredLetters = new RegExp(`${makeHasNotPattern(ignore)}`, "gim");
-    const randomPlaceLetters = new RegExp(`${makeHasPattern(letters)}.*`, "gim");
-
-    let result = words.filter(x => x.length === pattern.length)
-
-    if (ignore.length > 0) {
-        result = result.filter(x => x.match(ignoredLetters)[0].length === pattern.length)
-    }
-
-    if (letters.length > 0) {
-        result = result.filter(x => x.match(randomPlaceLetters))
-    }
-
-    unknowns.forEach(x => {
-        const filter = makeExactMatchPattern(x, lang);
-        result = result.filter(x => !x.match(filter))
+    const fixed = pattern.toLowerCase()
+    const fixedCounts = countLetters(fixed)
+    const requiredCounts = countLetters(normalizeLetters(letters, alphabet))
+    const grayLetters = new Set(normalizeLetters(ignore, alphabet))
+    const forbiddenPositions = unknowns.map(mask => mask.toLowerCase())
+    const constrainedLetters = new Set([...requiredCounts.keys(), ...grayLetters])
+    const limits = Array.from(constrainedLetters, letter => {
+        // Known letters may include copies already shown in the pattern.
+        const minimum = Math.max(fixedCounts.get(letter) || 0, requiredCounts.get(letter) || 0)
+        return { letter, minimum, maximum: grayLetters.has(letter) ? minimum : Infinity }
     })
 
-    result = result.filter(x => x.match(concreteLetters))
+    const pool = dictionaries[lang][fixed.length] || []
+    const candidates = pool.filter(({ word, letterCounts }) => matchesPattern(word, fixed) &&
+        matchesLetterLimits(letterCounts, limits) &&
+        !forbiddenPositions.some(mask => matchesPattern(word, mask)))
 
-    const repeatedLetters = scoreRepeatedLetters(result, letters)
+    const counts = Object.create(null)
+    for (const { word } of candidates) {
+        for (const letter of word) counts[letter] = (counts[letter] || 0) + 1
+    }
+    for (const letter of requiredCounts.keys()) counts[letter] = 0
 
-    const scored = result
-        .map(x => {
-            const uniqueLetters = [...new Set(x.split(""))]
-
-            const score = fixNumber(uniqueLetters
-                .reduce((a, b) => a + repeatedLetters[b], 0)
-            )
-            const score2 = fixNumber(x.split("")
-                .reduce((a, b) => a + scores[lang][b][1], 0)
-            )
-            const score3 = fixNumber(x.split("")
-                .reduce((a, b) => a + repeatedLetters[b], 0)
-            )
-
-            return [x, score, score2, score3]
-        })
-
-    const totalToPreview = 15
-
-    const suggestions1 = scored
-        .slice()
-        .sort((b, a) => a[1] - b[1])
-        .slice(0, totalToPreview)
-
-    const suggestions2 = scored
-        .slice()
-        .sort((b, a) => a[2] - b[2])
-        .slice(0, totalToPreview)
-
-    const suggestions3 = scored
-        .slice()
-        .sort((b, a) => a[3] - b[3])
-        .slice(0, totalToPreview)
-
-    return [scored.length, suggestions1, suggestions2, suggestions3]
+    const scored = candidates.map(({ word, letterCounts, languageScore }) => {
+        let uniqueScore = 0
+        let totalScore = 0
+        for (const [letter, copies] of letterCounts) {
+            uniqueScore += counts[letter]
+            totalScore += counts[letter] * copies
+        }
+        return [word, uniqueScore, languageScore, totalScore]
+    })
+    const rankings = [1, 2, 3].map(index =>
+        scored.slice().sort((a, b) => b[index] - a[index]).slice(0, 15)
+    )
+    return [scored.length, ...rankings]
 }
 
 module.exports = solve
+module.exports.ClueError = ClueError
